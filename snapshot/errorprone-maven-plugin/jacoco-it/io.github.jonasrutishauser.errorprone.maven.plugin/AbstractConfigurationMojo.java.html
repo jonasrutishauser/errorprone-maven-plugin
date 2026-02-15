@@ -158,71 +158,67 @@ import org.apache.maven.project.MavenProject;
     public void execute() throws MojoExecutionException {
 <span class="fc" id="L159">        String propertyValue = &quot;&quot;;</span>
 <span class="pc bpc" id="L160" title="1 of 2 branches missed.">        if (enabled) {</span>
-<span class="fc" id="L161">            List&lt;String&gt; options = getOptions();</span>
+<span class="fc" id="L161">            List&lt;String&gt; flags = getFlags();</span>
 
-<span class="fc" id="L163">            propertyValue = &quot;-Xplugin:ErrorProne &quot; + String.join(&quot; &quot;, options);</span>
+<span class="fc" id="L163">            propertyValue = &quot;-Xplugin:ErrorProne &quot; + String.join(&quot; &quot;, flags);</span>
         }
 <span class="fc" id="L165">        getLog().debug(&quot;Setting project property \&quot;&quot; + propertyName + &quot;\&quot; to \&quot;&quot; + propertyValue + &quot;\&quot;.&quot;);</span>
 <span class="fc" id="L166">        project.getProperties().put(propertyName, propertyValue);</span>
 <span class="fc" id="L167">        compilerConfiguration.configure(project, propertyName);</span>
 <span class="fc" id="L168">    }</span>
 
-    String getPropertyName() {
-<span class="nc" id="L171">        return propertyName;</span>
-    }
+    private List&lt;String&gt; getFlags() throws MojoExecutionException {
+<span class="fc" id="L171">        List&lt;String&gt; flags = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L172">        maybeAddOption(flags, &quot;-XepDisableAllChecks&quot;, disableAllChecks);</span>
+<span class="fc" id="L173">        maybeAddOption(flags, &quot;-XepDisableAllWarnings&quot;, disableAllWarnings);</span>
+<span class="fc" id="L174">        maybeAddOption(flags, &quot;-XepAllErrorsAsWarnings&quot;, allErrorsAsWarnings);</span>
+<span class="fc" id="L175">        maybeAddOption(flags, &quot;-XepAllSuggestionsAsWarnings&quot;, allSuggestionsAsWarnings);</span>
+<span class="fc" id="L176">        maybeAddOption(flags, &quot;-XepAllDisabledChecksAsWarnings&quot;, allDisabledChecksAsWarnings);</span>
+<span class="fc" id="L177">        maybeAddOption(flags, &quot;-XepDisableWarningsInGeneratedCode&quot;, disableWarningsInGeneratedCode);</span>
+<span class="fc" id="L178">        maybeAddOption(flags, &quot;-XepIgnoreUnknownCheckNames&quot;, ignoreUnknownCheckNames);</span>
+<span class="fc" id="L179">        maybeAddOption(flags, &quot;-XepIgnoreSuppressionAnnotations&quot;, ignoreSuppressionAnnotations);</span>
+<span class="fc" id="L180">        maybeAddOption(flags, &quot;-XepCompilingTestOnlyCode&quot;, isCompilingTestOnlyCode());</span>
+<span class="fc" id="L181">        maybeAddOption(flags, &quot;-XepExcludedPaths&quot;, excludePaths);</span>
 
-    private List&lt;String&gt; getOptions() throws MojoExecutionException {
-<span class="fc" id="L175">        List&lt;String&gt; options = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L176">        maybeAddOption(options, &quot;-XepDisableAllChecks&quot;, disableAllChecks);</span>
-<span class="fc" id="L177">        maybeAddOption(options, &quot;-XepDisableAllWarnings&quot;, disableAllWarnings);</span>
-<span class="fc" id="L178">        maybeAddOption(options, &quot;-XepAllErrorsAsWarnings&quot;, allErrorsAsWarnings);</span>
-<span class="fc" id="L179">        maybeAddOption(options, &quot;-XepAllSuggestionsAsWarnings&quot;, allSuggestionsAsWarnings);</span>
-<span class="fc" id="L180">        maybeAddOption(options, &quot;-XepAllDisabledChecksAsWarnings&quot;, allDisabledChecksAsWarnings);</span>
-<span class="fc" id="L181">        maybeAddOption(options, &quot;-XepDisableWarningsInGeneratedCode&quot;, disableWarningsInGeneratedCode);</span>
-<span class="fc" id="L182">        maybeAddOption(options, &quot;-XepIgnoreUnknownCheckNames&quot;, ignoreUnknownCheckNames);</span>
-<span class="fc" id="L183">        maybeAddOption(options, &quot;-XepIgnoreSuppressionAnnotations&quot;, ignoreSuppressionAnnotations);</span>
-<span class="fc" id="L184">        maybeAddOption(options, &quot;-XepCompilingTestOnlyCode&quot;, isCompilingTestOnlyCode());</span>
-<span class="fc" id="L185">        maybeAddOption(options, &quot;-XepExcludedPaths&quot;, excludePaths);</span>
-
-<span class="fc bfc" id="L187" title="All 2 branches covered.">        for (var entry : checks.entrySet()) {</span>
-<span class="fc" id="L188">            validateName(entry.getKey());</span>
-<span class="fc" id="L189">            String option = &quot;-Xep:&quot; + entry.getKey();</span>
-<span class="pc bpc" id="L190" title="1 of 2 branches missed.">            if (entry.getValue() != CheckSeverity.DEFAULT) {</span>
-<span class="fc" id="L191">                option += &quot;:&quot; + entry.getValue().name();</span>
+<span class="fc bfc" id="L183" title="All 2 branches covered.">        for (var entry : checks.entrySet()) {</span>
+<span class="fc" id="L184">            validateName(entry.getKey());</span>
+<span class="fc" id="L185">            String option = &quot;-Xep:&quot; + entry.getKey();</span>
+<span class="pc bpc" id="L186" title="1 of 2 branches missed.">            if (entry.getValue() != CheckSeverity.DEFAULT) {</span>
+<span class="fc" id="L187">                option += &quot;:&quot; + entry.getValue().name();</span>
             }
-<span class="fc" id="L193">            options.add(option);</span>
-<span class="fc" id="L194">        }</span>
-<span class="fc bfc" id="L195" title="All 2 branches covered.">        for (var namespacedEntry : this.namespacedOptions.entrySet()) {</span>
-<span class="fc bfc" id="L196" title="All 2 branches covered.">            for (var entry : namespacedEntry.getValue().entrySet()) {</span>
-<span class="fc" id="L197">                options.add(&quot;-XepOpt:&quot; + namespacedEntry.getKey() + &quot;:&quot; + entry.getKey() + &quot;=&quot; + entry.getValue());</span>
-<span class="fc" id="L198">            }</span>
-<span class="fc" id="L199">        }</span>
-<span class="pc bpc" id="L200" title="1 of 2 branches missed.">        for (var entry : this.options.entrySet()) {</span>
-<span class="nc" id="L201">            options.add(&quot;-XepOpt:&quot; + entry.getKey() + &quot;=&quot; + entry.getValue());</span>
-<span class="nc" id="L202">        }</span>
-<span class="fc" id="L203">        options.addAll(arguments);</span>
+<span class="fc" id="L189">            flags.add(option);</span>
+<span class="fc" id="L190">        }</span>
+<span class="fc bfc" id="L191" title="All 2 branches covered.">        for (var namespacedEntry : this.namespacedOptions.entrySet()) {</span>
+<span class="fc bfc" id="L192" title="All 2 branches covered.">            for (var entry : namespacedEntry.getValue().entrySet()) {</span>
+<span class="fc" id="L193">                flags.add(&quot;-XepOpt:&quot; + namespacedEntry.getKey() + &quot;:&quot; + entry.getKey() + &quot;=&quot; + entry.getValue());</span>
+<span class="fc" id="L194">            }</span>
+<span class="fc" id="L195">        }</span>
+<span class="pc bpc" id="L196" title="1 of 2 branches missed.">        for (var entry : this.options.entrySet()) {</span>
+<span class="nc" id="L197">            flags.add(&quot;-XepOpt:&quot; + entry.getKey() + &quot;=&quot; + entry.getValue());</span>
+<span class="nc" id="L198">        }</span>
+<span class="fc" id="L199">        flags.addAll(arguments);</span>
 
-<span class="fc" id="L205">        return options;</span>
+<span class="fc" id="L201">        return flags;</span>
     }
 
     private void validateName(String checkName) throws MojoExecutionException {
-<span class="pc bpc" id="L209" title="1 of 2 branches missed.">        if (checkName.contains(&quot;:&quot;)) {</span>
-<span class="nc" id="L210">            throw new MojoExecutionException(</span>
-<span class="nc" id="L211">                    String.format(&quot;Error Prone check name cannot contain a colon (\&quot;:\&quot;): \&quot;%s\&quot;.&quot;, checkName));</span>
+<span class="pc bpc" id="L205" title="1 of 2 branches missed.">        if (checkName.contains(&quot;:&quot;)) {</span>
+<span class="nc" id="L206">            throw new MojoExecutionException(</span>
+<span class="nc" id="L207">                    String.format(&quot;Error Prone check name cannot contain a colon (\&quot;:\&quot;): \&quot;%s\&quot;.&quot;, checkName));</span>
         }
-<span class="fc" id="L213">    }</span>
+<span class="fc" id="L209">    }</span>
 
     private void maybeAddOption(List&lt;String&gt; options, String option, boolean value) {
-<span class="pc bpc" id="L216" title="1 of 2 branches missed.">        if (value) {</span>
-<span class="nc" id="L217">            options.add(option);</span>
+<span class="pc bpc" id="L212" title="1 of 2 branches missed.">        if (value) {</span>
+<span class="nc" id="L213">            options.add(option);</span>
         }
-<span class="fc" id="L219">    }</span>
+<span class="fc" id="L215">    }</span>
 
     private void maybeAddOption(List&lt;String&gt; options, String option, String value) {
-<span class="pc bpc" id="L222" title="3 of 4 branches missed.">        if (value != null &amp;&amp; !value.isBlank()) {</span>
-<span class="nc" id="L223">            options.add(option + &quot;:&quot; + value);</span>
+<span class="pc bpc" id="L218" title="3 of 4 branches missed.">        if (value != null &amp;&amp; !value.isBlank()) {</span>
+<span class="nc" id="L219">            options.add(option + &quot;:&quot; + value);</span>
         }
-<span class="fc" id="L225">    }</span>
+<span class="fc" id="L221">    }</span>
 
     protected abstract boolean isCompilingTestOnlyCode();
 
