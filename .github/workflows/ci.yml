@@ -1,0 +1,32 @@
+name: Maven CI
+
+on:
+  schedule:
+    - cron: '42 0 * * 1'
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  release:
+    types:
+      - published
+
+permissions:
+  checks: write
+  security-events: write
+  contents: write
+
+jobs:
+  build:
+    uses: jonasrutishauser/parent/.github/workflows/common-ci.yml@v36
+    with:
+      java-versions: '["21", "25"]'
+      deploy-site: ${{ github.event_name == 'push' }}
+      publish-test-report: true
+      publish-coverage-report: true
+      sonar-report: true
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
