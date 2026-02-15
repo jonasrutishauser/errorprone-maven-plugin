@@ -158,31 +158,27 @@ abstract class AbstractConfigurationMojo extends AbstractMojo {
     public void execute() throws MojoExecutionException {
         String propertyValue = "";
         if (enabled) {
-            List<String> options = getOptions();
+            List<String> flags = getFlags();
 
-            propertyValue = "-Xplugin:ErrorProne " + String.join(" ", options);
+            propertyValue = "-Xplugin:ErrorProne " + String.join(" ", flags);
         }
         getLog().debug("Setting project property \"" + propertyName + "\" to \"" + propertyValue + "\".");
         project.getProperties().put(propertyName, propertyValue);
         compilerConfiguration.configure(project, propertyName);
     }
 
-    String getPropertyName() {
-        return propertyName;
-    }
-
-    private List<String> getOptions() throws MojoExecutionException {
-        List<String> options = new ArrayList<>();
-        maybeAddOption(options, "-XepDisableAllChecks", disableAllChecks);
-        maybeAddOption(options, "-XepDisableAllWarnings", disableAllWarnings);
-        maybeAddOption(options, "-XepAllErrorsAsWarnings", allErrorsAsWarnings);
-        maybeAddOption(options, "-XepAllSuggestionsAsWarnings", allSuggestionsAsWarnings);
-        maybeAddOption(options, "-XepAllDisabledChecksAsWarnings", allDisabledChecksAsWarnings);
-        maybeAddOption(options, "-XepDisableWarningsInGeneratedCode", disableWarningsInGeneratedCode);
-        maybeAddOption(options, "-XepIgnoreUnknownCheckNames", ignoreUnknownCheckNames);
-        maybeAddOption(options, "-XepIgnoreSuppressionAnnotations", ignoreSuppressionAnnotations);
-        maybeAddOption(options, "-XepCompilingTestOnlyCode", isCompilingTestOnlyCode());
-        maybeAddOption(options, "-XepExcludedPaths", excludePaths);
+    private List<String> getFlags() throws MojoExecutionException {
+        List<String> flags = new ArrayList<>();
+        maybeAddOption(flags, "-XepDisableAllChecks", disableAllChecks);
+        maybeAddOption(flags, "-XepDisableAllWarnings", disableAllWarnings);
+        maybeAddOption(flags, "-XepAllErrorsAsWarnings", allErrorsAsWarnings);
+        maybeAddOption(flags, "-XepAllSuggestionsAsWarnings", allSuggestionsAsWarnings);
+        maybeAddOption(flags, "-XepAllDisabledChecksAsWarnings", allDisabledChecksAsWarnings);
+        maybeAddOption(flags, "-XepDisableWarningsInGeneratedCode", disableWarningsInGeneratedCode);
+        maybeAddOption(flags, "-XepIgnoreUnknownCheckNames", ignoreUnknownCheckNames);
+        maybeAddOption(flags, "-XepIgnoreSuppressionAnnotations", ignoreSuppressionAnnotations);
+        maybeAddOption(flags, "-XepCompilingTestOnlyCode", isCompilingTestOnlyCode());
+        maybeAddOption(flags, "-XepExcludedPaths", excludePaths);
 
         for (var entry : checks.entrySet()) {
             validateName(entry.getKey());
@@ -190,19 +186,19 @@ abstract class AbstractConfigurationMojo extends AbstractMojo {
             if (entry.getValue() != CheckSeverity.DEFAULT) {
                 option += ":" + entry.getValue().name();
             }
-            options.add(option);
+            flags.add(option);
         }
         for (var namespacedEntry : this.namespacedOptions.entrySet()) {
             for (var entry : namespacedEntry.getValue().entrySet()) {
-                options.add("-XepOpt:" + namespacedEntry.getKey() + ":" + entry.getKey() + "=" + entry.getValue());
+                flags.add("-XepOpt:" + namespacedEntry.getKey() + ":" + entry.getKey() + "=" + entry.getValue());
             }
         }
         for (var entry : this.options.entrySet()) {
-            options.add("-XepOpt:" + entry.getKey() + "=" + entry.getValue());
+            flags.add("-XepOpt:" + entry.getKey() + "=" + entry.getValue());
         }
-        options.addAll(arguments);
+        flags.addAll(arguments);
 
-        return options;
+        return flags;
     }
 
     private void validateName(String checkName) throws MojoExecutionException {

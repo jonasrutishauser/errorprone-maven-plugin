@@ -79,28 +79,28 @@ public class CompilerConfiguration implements ProjectExecutionListener {
         project.getDependencies().stream().filter(dependency -> "errorprone".equals(dependency.getType()))
                 .forEach(dependency -> addAnnotationProcessorPath(compilerExecution.getConfiguration(), dependency));
 
-        Xpp3Dom fork = compilerExecution.getConfiguration().getChild("fork");
-        if (StrongEncapsulationHelperJava.CURRENT_JVM_NEEDS_FORKING && !isTrue(fork)) {
-            if (fork == null) {
-                fork = new Xpp3Dom("fork");
-                compilerExecution.getConfiguration().addChild(fork);
-            }
-            fork.setValue("true");
-            LOGGER.debug("Set fork to true");
-        }
+        Xpp3Dom fork = setForkIfNeeded(compilerExecution.getConfiguration());
 
-        Xpp3Dom compilerArgs = compilerExecution.getConfiguration().getChild("compilerArgs");
-        if (compilerArgs == null) {
-            compilerArgs = new Xpp3Dom("compilerArgs");
-            compilerExecution.getConfiguration().addChild(compilerArgs);
+        Xpp3Dom compilerArgs = createOrGetCompilerArgs(compilerExecution.getConfiguration());
+        addPluginArgument(propertyName, compilerArgs);
+        addCompilerArguments(compilerArgs);
+        if (isTrue(fork)) {
+            addJvmStrongEncapsulationArguments(compilerArgs);
         }
-        if (!hasCompilerArg(compilerArgs.getChildren(), "-Xplugin:ErrorProne")
-                && !hasCompilerArg(compilerArgs.getChildren(), "${" + propertyName + "}")) {
-            LOGGER.debug("Adding compiler argument \"${" + propertyName + "}\"");
-            Xpp3Dom compilerArg = new Xpp3Dom("arg");
-            compilerArg.setValue("${" + propertyName + "}");
-            compilerArgs.addChild(compilerArg);
+    }
+
+    private void addJvmStrongEncapsulationArguments(Xpp3Dom compilerArgs) {
+        for (String jvmArg : JVM_ARGS_STRONG_ENCAPSULATION) {
+            if (!hasCompilerArg(compilerArgs.getChildren(), jvmArg)) {
+                LOGGER.debug("Adding compiler argument \"{}\"", jvmArg);
+                Xpp3Dom compilerArg = new Xpp3Dom("arg");
+                compilerArg.setValue(jvmArg);
+                compilerArgs.addChild(compilerArg);
+            }
         }
+    }
+
+    private void addCompilerArguments(Xpp3Dom compilerArgs) {
         for (String arg : COMPILER_ARGS) {
             if (!hasCompilerArg(compilerArgs.getChildren(), arg)) {
                 LOGGER.debug("Adding compiler argument \"{}\"", arg);
@@ -109,16 +109,38 @@ public class CompilerConfiguration implements ProjectExecutionListener {
                 compilerArgs.addChild(compilerArg);
             }
         }
-        if (isTrue(fork)) {
-            for (String jvmArg : JVM_ARGS_STRONG_ENCAPSULATION) {
-                if (!hasCompilerArg(compilerArgs.getChildren(), jvmArg)) {
-                    LOGGER.debug("Adding compiler argument \"{}\"", jvmArg);
-                    Xpp3Dom compilerArg = new Xpp3Dom("arg");
-                    compilerArg.setValue(jvmArg);
-                    compilerArgs.addChild(compilerArg);
-                }
-            }
+    }
+
+    private void addPluginArgument(String propertyName, Xpp3Dom compilerArgs) {
+        if (!hasCompilerArg(compilerArgs.getChildren(), "-Xplugin:ErrorProne")
+                && !hasCompilerArg(compilerArgs.getChildren(), "${" + propertyName + "}")) {
+            LOGGER.debug("Adding compiler argument \"${{}}\"", propertyName);
+            Xpp3Dom compilerArg = new Xpp3Dom("arg");
+            compilerArg.setValue("${" + propertyName + "}");
+            compilerArgs.addChild(compilerArg);
         }
+    }
+
+    private Xpp3Dom createOrGetCompilerArgs(Xpp3Dom configuration) {
+        Xpp3Dom compilerArgs = configuration.getChild("compilerArgs");
+        if (compilerArgs == null) {
+            compilerArgs = new Xpp3Dom("compilerArgs");
+            configuration.addChild(compilerArgs);
+        }
+        return compilerArgs;
+    }
+
+    private Xpp3Dom setForkIfNeeded(Xpp3Dom configuration) {
+        Xpp3Dom fork = configuration.getChild("fork");
+        if (StrongEncapsulationHelperJava.CURRENT_JVM_NEEDS_FORKING && !isTrue(fork)) {
+            if (fork == null) {
+                fork = new Xpp3Dom("fork");
+                configuration.addChild(fork);
+            }
+            fork.setValue("true");
+            LOGGER.debug("Set fork to true");
+        }
+        return fork;
     }
 
     private void addAnnotationProcessorPath(Xpp3Dom configuration, Dependency dependency) {
