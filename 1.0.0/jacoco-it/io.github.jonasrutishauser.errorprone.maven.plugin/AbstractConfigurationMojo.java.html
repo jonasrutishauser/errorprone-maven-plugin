@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractConfigurationMojo.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Error Prone Maven Plugin</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.errorprone.maven.plugin</a> &gt; <span class="el_source">AbstractConfigurationMojo.java</span></div><h1>AbstractConfigurationMojo.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.errorprone.maven.plugin;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+
+import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
+
+<span class="fc" id="L15">abstract class AbstractConfigurationMojo extends AbstractMojo {</span>
+
+    /**
+     * Allows disabling Error Prone altogether.
+     * &lt;p&gt;
+     * Error Prone will still be in the annotation processor path, but
+     * {@code -Xplugin:ErrorProne} won't be passed as a compiler argument.
+     */
+    @Parameter(defaultValue = &quot;true&quot;, property = &quot;errorprone.enabled&quot;)
+    private boolean enabled;
+
+    /**
+     * Disable all Error Prone checks. Maps to {@code -XepDisableAllChecks}.
+     * &lt;p&gt;
+     * This will be the first argument, so checks can then be re-enabled on a
+     * case-by-case basis.
+     */
+    @Parameter(defaultValue = &quot;false&quot;, property = &quot;errorprone.disableAllChecks&quot;)
+    private boolean disableAllChecks;
+
+    /**
+     * Disables all Error Prone warnings. Maps to {@code -XepDisableAllWarnings}.
+     * &lt;p&gt;
+     * This will be among the first arguments, so checks can then be re-enabled on a
+     * case-by-case basis.
+     */
+    @Parameter(defaultValue = &quot;false&quot;, property = &quot;errorprone.disableAllWarnings&quot;)
+    private boolean disableAllWarnings;
+
+    /**
+     * Turns all Error Prone errors into warnings. Maps to
+     * {@code -XepAllErrorsAsWarnings}.
+     * &lt;p&gt;
+     * This will be among the first arguments, so checks can then be promoted back
+     * to error on a case-by-case basis.
+     */
+    @Parameter(defaultValue = &quot;false&quot;, property = &quot;errorprone.allErrorsAsWarnings&quot;)
+    private boolean allErrorsAsWarnings;
+
+    /**
+     * Turn all Error Prone suggestions into warnings. Maps to
+     * {@code -XepAllSuggestionsAsWarnings}.
+     * &lt;p&gt;
+     * This will be among the first arguments, so checks can then be demoted back to
+     * suggestions on a case-by-case basis.
+     */
+    @Parameter(defaultValue = &quot;false&quot;, property = &quot;errorprone.allSuggestionsAsWarnings&quot;)
+    private boolean allSuggestionsAsWarnings;
+
+    /**
+     * Enables all Error Prone checks, checks that are disabled by default are
+     * enabled as warnings. Maps to {@code -XepAllDisabledChecksAsWarnings}.
+     * &lt;p&gt;
+     * This will be among the first arguments, so checks can then be disabled again
+     * on a case-by-case basis.
+     */
+    @Parameter(defaultValue = &quot;false&quot;, property = &quot;errorprone.allDisabledChecksAsWarnings&quot;)
+    private boolean allDisabledChecksAsWarnings;
+
+    /**
+     * Disables warnings in classes annotated with {@code @Generated}. Maps to
+     * {@code -XepDisableWarningsInGeneratedCode}.
+     */
+    @Parameter(defaultValue = &quot;false&quot;, property = &quot;errorprone.disableWarningsInGeneratedCode&quot;)
+    private boolean disableWarningsInGeneratedCode;
+
+    /**
+     * Tells Error Prone to ignore unknown check names in {@link #checks checks}.
+     * Maps to {@code -XepIgnoreUnknownCheckNames}.
+     */
+    @Parameter(defaultValue = &quot;false&quot;, property = &quot;errorprone.ignoreUnknownCheckNames&quot;)
+    private boolean ignoreUnknownCheckNames;
+
+    /**
+     * Ignores suppression annotations, such as
+     * {@link SuppressWarnings @SuppressWarnings}. Maps to
+     * {@code -XepIgnoreSuppressionAnnotations}.
+     */
+    @Parameter(defaultValue = &quot;false&quot;, property = &quot;errorprone.ignoreSuppressionAnnotations&quot;)
+    private boolean ignoreSuppressionAnnotations;
+
+    /**
+     * A regular expression pattern of file paths to exclude from Error Prone
+     * checking. Maps to {@code -XepExcludedPaths}.
+     */
+    @Parameter(property = &quot;errorprone.excludePaths&quot;)
+    private String excludePaths;
+
+    /**
+     * A map of check name to {@link CheckSeverity}, to configure which checks are
+     * enabled or disabled, and their severity.
+     * &lt;p&gt;
+     * Maps each entry to {@code -Xep:&lt;key&gt;:&lt;value&gt;}, or {@code -Xep:&lt;key&gt;} if the
+     * value is {@link CheckSeverity#DEFAULT}.
+     */
+<span class="fc" id="L110">    @Parameter</span>
+    private Map&lt;String, CheckSeverity&gt; checks = new HashMap&lt;&gt;();
+
+    /**
+     * A map of &lt;a href=
+     * &quot;https://errorprone.info/docs/flags#pass-additional-info-to-bugcheckers&quot;&gt;check
+     * options&lt;/a&gt; to their value.
+     * &lt;p&gt;
+     * Use an explicit {@code &quot;true&quot;} value for a boolean option.
+     * &lt;p&gt;
+     * Maps each entry to {@code -XepOpt:&lt;key&gt;=&lt;value&gt;}.
+     */
+<span class="fc" id="L122">    @Parameter</span>
+    private Map&lt;String, String&gt; options = new HashMap&lt;&gt;();
+
+    /**
+     * A map of &lt;a href=
+     * &quot;https://errorprone.info/docs/flags#pass-additional-info-to-bugcheckers&quot;&gt;namespaced
+     * check options&lt;/a&gt; to their value.
+     * &lt;p&gt;
+     * Use an explicit {@code &quot;true&quot;} value for a boolean option.
+     * &lt;p&gt;
+     * Maps each entry to {@code -XepOpt:&lt;namespace&gt;:&lt;key&gt;=&lt;value&gt;}.
+     */
+<span class="fc" id="L134">    @Parameter</span>
+    private Map&lt;String, Map&lt;String, String&gt;&gt; namespacedOptions = new HashMap&lt;&gt;();
+
+    /**
+     * Additional arguments passed to Error Prone.
+     */
+<span class="fc" id="L140">    @Parameter(property = &quot;errorprone.arguments&quot;)</span>
+    private List&lt;String&gt; arguments = new ArrayList&lt;&gt;();
+
+    /**
+     * The name of the {@link MavenProject#getProperties() project property} which
+     * will be set to the generated compiler argument (the value will be of the form
+     * {@code -Xplugin:ErrorProne &lt;options&gt;}).
+     */
+    @Parameter(defaultValue = &quot;errorprone.compile.argument&quot;)
+    private String propertyName;
+
+    @Inject
+    private MavenProject project;
+
+    @Inject
+    private CompilerConfiguration compilerConfiguration;
+
+    @Override
+    public void execute() throws MojoExecutionException {
+<span class="fc" id="L159">        String propertyValue = &quot;&quot;;</span>
+<span class="pc bpc" id="L160" title="1 of 2 branches missed.">        if (enabled) {</span>
+<span class="fc" id="L161">            List&lt;String&gt; flags = getFlags();</span>
+
+<span class="fc" id="L163">            propertyValue = &quot;-Xplugin:ErrorProne &quot; + String.join(&quot; &quot;, flags);</span>
+        }
+<span class="fc" id="L165">        getLog().debug(&quot;Setting project property \&quot;&quot; + propertyName + &quot;\&quot; to \&quot;&quot; + propertyValue + &quot;\&quot;.&quot;);</span>
+<span class="fc" id="L166">        project.getProperties().put(propertyName, propertyValue);</span>
+<span class="fc" id="L167">        compilerConfiguration.configure(project, propertyName);</span>
+<span class="fc" id="L168">    }</span>
+
+    private List&lt;String&gt; getFlags() throws MojoExecutionException {
+<span class="fc" id="L171">        List&lt;String&gt; flags = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L172">        maybeAddOption(flags, &quot;-XepDisableAllChecks&quot;, disableAllChecks);</span>
+<span class="fc" id="L173">        maybeAddOption(flags, &quot;-XepDisableAllWarnings&quot;, disableAllWarnings);</span>
+<span class="fc" id="L174">        maybeAddOption(flags, &quot;-XepAllErrorsAsWarnings&quot;, allErrorsAsWarnings);</span>
+<span class="fc" id="L175">        maybeAddOption(flags, &quot;-XepAllSuggestionsAsWarnings&quot;, allSuggestionsAsWarnings);</span>
+<span class="fc" id="L176">        maybeAddOption(flags, &quot;-XepAllDisabledChecksAsWarnings&quot;, allDisabledChecksAsWarnings);</span>
+<span class="fc" id="L177">        maybeAddOption(flags, &quot;-XepDisableWarningsInGeneratedCode&quot;, disableWarningsInGeneratedCode);</span>
+<span class="fc" id="L178">        maybeAddOption(flags, &quot;-XepIgnoreUnknownCheckNames&quot;, ignoreUnknownCheckNames);</span>
+<span class="fc" id="L179">        maybeAddOption(flags, &quot;-XepIgnoreSuppressionAnnotations&quot;, ignoreSuppressionAnnotations);</span>
+<span class="fc" id="L180">        maybeAddOption(flags, &quot;-XepCompilingTestOnlyCode&quot;, isCompilingTestOnlyCode());</span>
+<span class="fc" id="L181">        maybeAddOption(flags, &quot;-XepExcludedPaths&quot;, excludePaths);</span>
+
+<span class="fc bfc" id="L183" title="All 2 branches covered.">        for (var entry : checks.entrySet()) {</span>
+<span class="fc" id="L184">            validateName(entry.getKey());</span>
+<span class="fc" id="L185">            String option = &quot;-Xep:&quot; + entry.getKey();</span>
+<span class="pc bpc" id="L186" title="1 of 2 branches missed.">            if (entry.getValue() != CheckSeverity.DEFAULT) {</span>
+<span class="fc" id="L187">                option += &quot;:&quot; + entry.getValue().name();</span>
+            }
+<span class="fc" id="L189">            flags.add(option);</span>
+<span class="fc" id="L190">        }</span>
+<span class="fc bfc" id="L191" title="All 2 branches covered.">        for (var namespacedEntry : this.namespacedOptions.entrySet()) {</span>
+<span class="fc bfc" id="L192" title="All 2 branches covered.">            for (var entry : namespacedEntry.getValue().entrySet()) {</span>
+<span class="fc" id="L193">                flags.add(&quot;-XepOpt:&quot; + namespacedEntry.getKey() + &quot;:&quot; + entry.getKey() + &quot;=&quot; + entry.getValue());</span>
+<span class="fc" id="L194">            }</span>
+<span class="fc" id="L195">        }</span>
+<span class="pc bpc" id="L196" title="1 of 2 branches missed.">        for (var entry : this.options.entrySet()) {</span>
+<span class="nc" id="L197">            flags.add(&quot;-XepOpt:&quot; + entry.getKey() + &quot;=&quot; + entry.getValue());</span>
+<span class="nc" id="L198">        }</span>
+<span class="fc" id="L199">        flags.addAll(arguments);</span>
+
+<span class="fc" id="L201">        return flags;</span>
+    }
+
+    private void validateName(String checkName) throws MojoExecutionException {
+<span class="pc bpc" id="L205" title="1 of 2 branches missed.">        if (checkName.contains(&quot;:&quot;)) {</span>
+<span class="nc" id="L206">            throw new MojoExecutionException(</span>
+<span class="nc" id="L207">                    String.format(&quot;Error Prone check name cannot contain a colon (\&quot;:\&quot;): \&quot;%s\&quot;.&quot;, checkName));</span>
+        }
+<span class="fc" id="L209">    }</span>
+
+    private void maybeAddOption(List&lt;String&gt; options, String option, boolean value) {
+<span class="pc bpc" id="L212" title="1 of 2 branches missed.">        if (value) {</span>
+<span class="nc" id="L213">            options.add(option);</span>
+        }
+<span class="fc" id="L215">    }</span>
+
+    private void maybeAddOption(List&lt;String&gt; options, String option, String value) {
+<span class="pc bpc" id="L218" title="3 of 4 branches missed.">        if (value != null &amp;&amp; !value.isBlank()) {</span>
+<span class="nc" id="L219">            options.add(option + &quot;:&quot; + value);</span>
+        }
+<span class="fc" id="L221">    }</span>
+
+    protected abstract boolean isCompilingTestOnlyCode();
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>
