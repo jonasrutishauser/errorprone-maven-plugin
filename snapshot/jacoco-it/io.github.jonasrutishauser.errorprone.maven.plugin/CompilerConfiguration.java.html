@@ -86,132 +86,143 @@ class CompilerConfiguration {
 <span class="fc" id="L86">        LOGGER.debug(&quot;Configuring compiler plugin for execution {}&quot;, compilerExecution.getExecutionId());</span>
 <span class="fc" id="L87">        PluginParameterExpressionEvaluator evaluator = new PluginParameterExpressionEvaluator(session, compilerExecution);</span>
 
-<span class="fc" id="L89">        project.getDependencies().stream().filter(dependency -&gt; &quot;errorprone&quot;.equals(dependency.getType()))</span>
-<span class="fc" id="L90">                .forEach(dependency -&gt; addAnnotationProcessorPath(compilerExecution.getConfiguration(), dependency, evaluator));</span>
-
-<span class="fc" id="L92">        Xpp3Dom fork = setForkIfNeeded(compilerExecution.getConfiguration(), evaluator);</span>
-
-<span class="fc" id="L94">        Xpp3Dom compilerArgs = createOrGetCompilerArgs(compilerExecution.getConfiguration());</span>
-<span class="fc" id="L95">        addPluginArgument(propertyName, compilerArgs, evaluator);</span>
-<span class="fc" id="L96">        addCompilerArguments(compilerArgs, evaluator);</span>
-<span class="pc bpc" id="L97" title="1 of 2 branches missed.">        if (isTrue(fork, evaluator)) {</span>
-<span class="fc" id="L98">            addJvmStrongEncapsulationArguments(compilerArgs, evaluator);</span>
+<span class="fc" id="L89">        addAnnotationProcessorPaths(project.getDependencies(), compilerExecution.getConfiguration(), evaluator);</span>
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">        if (project.getDependencyManagement() != null) {</span>
+<span class="fc" id="L91">            addAnnotationProcessorPaths(project.getDependencyManagement().getDependencies(),</span>
+<span class="fc" id="L92">                    compilerExecution.getConfiguration(), evaluator);</span>
         }
-<span class="fc" id="L100">    }</span>
 
-    private void addJvmStrongEncapsulationArguments(Xpp3Dom compilerArgs, PluginParameterExpressionEvaluator evaluator) {
-<span class="fc bfc" id="L103" title="All 2 branches covered.">        for (String jvmArg : JVM_ARGS_STRONG_ENCAPSULATION) {</span>
-<span class="pc bpc" id="L104" title="1 of 2 branches missed.">            if (!hasCompilerArg(compilerArgs.getChildren(), jvmArg, evaluator)) {</span>
-<span class="fc" id="L105">                LOGGER.debug(&quot;Adding compiler argument \&quot;{}\&quot;&quot;, jvmArg);</span>
-<span class="fc" id="L106">                Xpp3Dom compilerArg = new Xpp3Dom(&quot;arg&quot;);</span>
-<span class="fc" id="L107">                compilerArg.setValue(jvmArg);</span>
-<span class="fc" id="L108">                compilerArgs.addChild(compilerArg);</span>
+<span class="fc" id="L95">        Xpp3Dom fork = setForkIfNeeded(compilerExecution.getConfiguration(), evaluator);</span>
+
+<span class="fc" id="L97">        Xpp3Dom compilerArgs = createOrGetCompilerArgs(compilerExecution.getConfiguration());</span>
+<span class="fc" id="L98">        addPluginArgument(propertyName, compilerArgs, evaluator);</span>
+<span class="fc" id="L99">        addCompilerArguments(compilerArgs, evaluator);</span>
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">        if (isTrue(fork, evaluator)) {</span>
+<span class="fc" id="L101">            addJvmStrongEncapsulationArguments(compilerArgs, evaluator);</span>
+        }
+<span class="fc" id="L103">    }</span>
+
+    private void addAnnotationProcessorPaths(List&lt;Dependency&gt; dependencies, Xpp3Dom configuration, PluginParameterExpressionEvaluator evaluator) {
+<span class="fc bfc" id="L106" title="All 2 branches covered.">        for (Dependency dependency : dependencies) {</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">            if (&quot;errorprone&quot;.equals(dependency.getType())) {</span>
+<span class="fc" id="L108">                addAnnotationProcessorPath(configuration, dependency, evaluator);</span>
             }
 <span class="fc" id="L110">        }</span>
 <span class="fc" id="L111">    }</span>
 
-    private void addCompilerArguments(Xpp3Dom compilerArgs, PluginParameterExpressionEvaluator evaluator) {
-<span class="fc bfc" id="L114" title="All 2 branches covered.">        for (String arg : COMPILER_ARGS) {</span>
-<span class="pc bpc" id="L115" title="1 of 2 branches missed.">            if (!hasCompilerArg(compilerArgs.getChildren(), arg, evaluator)) {</span>
-<span class="fc" id="L116">                LOGGER.debug(&quot;Adding compiler argument \&quot;{}\&quot;&quot;, arg);</span>
+    private void addJvmStrongEncapsulationArguments(Xpp3Dom compilerArgs, PluginParameterExpressionEvaluator evaluator) {
+<span class="fc bfc" id="L114" title="All 2 branches covered.">        for (String jvmArg : JVM_ARGS_STRONG_ENCAPSULATION) {</span>
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">            if (!hasCompilerArg(compilerArgs.getChildren(), jvmArg, evaluator)) {</span>
+<span class="fc" id="L116">                LOGGER.debug(&quot;Adding compiler argument \&quot;{}\&quot;&quot;, jvmArg);</span>
 <span class="fc" id="L117">                Xpp3Dom compilerArg = new Xpp3Dom(&quot;arg&quot;);</span>
-<span class="fc" id="L118">                compilerArg.setValue(arg);</span>
+<span class="fc" id="L118">                compilerArg.setValue(jvmArg);</span>
 <span class="fc" id="L119">                compilerArgs.addChild(compilerArg);</span>
             }
 <span class="fc" id="L121">        }</span>
 <span class="fc" id="L122">    }</span>
 
+    private void addCompilerArguments(Xpp3Dom compilerArgs, PluginParameterExpressionEvaluator evaluator) {
+<span class="fc bfc" id="L125" title="All 2 branches covered.">        for (String arg : COMPILER_ARGS) {</span>
+<span class="pc bpc" id="L126" title="1 of 2 branches missed.">            if (!hasCompilerArg(compilerArgs.getChildren(), arg, evaluator)) {</span>
+<span class="fc" id="L127">                LOGGER.debug(&quot;Adding compiler argument \&quot;{}\&quot;&quot;, arg);</span>
+<span class="fc" id="L128">                Xpp3Dom compilerArg = new Xpp3Dom(&quot;arg&quot;);</span>
+<span class="fc" id="L129">                compilerArg.setValue(arg);</span>
+<span class="fc" id="L130">                compilerArgs.addChild(compilerArg);</span>
+            }
+<span class="fc" id="L132">        }</span>
+<span class="fc" id="L133">    }</span>
+
     private void addPluginArgument(String propertyName, Xpp3Dom compilerArgs, PluginParameterExpressionEvaluator evaluator) {
-<span class="pc bpc" id="L125" title="1 of 2 branches missed.">        if (!hasCompilerArg(compilerArgs.getChildren(), &quot;-Xplugin:ErrorProne&quot;, evaluator)) {</span>
-<span class="fc" id="L126">            LOGGER.debug(&quot;Adding compiler argument \&quot;${{}}\&quot;&quot;, propertyName);</span>
-<span class="fc" id="L127">            Xpp3Dom compilerArg = new Xpp3Dom(&quot;arg&quot;);</span>
-<span class="fc" id="L128">            compilerArg.setValue(&quot;${&quot; + propertyName + &quot;}&quot;);</span>
-<span class="fc" id="L129">            compilerArgs.addChild(compilerArg);</span>
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">        if (!hasCompilerArg(compilerArgs.getChildren(), &quot;-Xplugin:ErrorProne&quot;, evaluator)) {</span>
+<span class="fc" id="L137">            LOGGER.debug(&quot;Adding compiler argument \&quot;${{}}\&quot;&quot;, propertyName);</span>
+<span class="fc" id="L138">            Xpp3Dom compilerArg = new Xpp3Dom(&quot;arg&quot;);</span>
+<span class="fc" id="L139">            compilerArg.setValue(&quot;${&quot; + propertyName + &quot;}&quot;);</span>
+<span class="fc" id="L140">            compilerArgs.addChild(compilerArg);</span>
         }
-<span class="fc" id="L131">    }</span>
+<span class="fc" id="L142">    }</span>
 
     private Xpp3Dom createOrGetCompilerArgs(Xpp3Dom configuration) {
-<span class="fc" id="L134">        Xpp3Dom compilerArgs = configuration.getChild(&quot;compilerArgs&quot;);</span>
-<span class="pc bpc" id="L135" title="1 of 2 branches missed.">        if (compilerArgs == null) {</span>
-<span class="fc" id="L136">            compilerArgs = new Xpp3Dom(&quot;compilerArgs&quot;);</span>
-<span class="fc" id="L137">            configuration.addChild(compilerArgs);</span>
+<span class="fc" id="L145">        Xpp3Dom compilerArgs = configuration.getChild(&quot;compilerArgs&quot;);</span>
+<span class="pc bpc" id="L146" title="1 of 2 branches missed.">        if (compilerArgs == null) {</span>
+<span class="fc" id="L147">            compilerArgs = new Xpp3Dom(&quot;compilerArgs&quot;);</span>
+<span class="fc" id="L148">            configuration.addChild(compilerArgs);</span>
         }
-<span class="fc" id="L139">        return compilerArgs;</span>
+<span class="fc" id="L150">        return compilerArgs;</span>
     }
 
     private Xpp3Dom setForkIfNeeded(Xpp3Dom configuration, PluginParameterExpressionEvaluator evaluator) {
-<span class="fc" id="L143">        Xpp3Dom fork = configuration.getChild(&quot;fork&quot;);</span>
-<span class="pc bpc" id="L144" title="2 of 4 branches missed.">        if (StrongEncapsulationHelperJava.CURRENT_JVM_NEEDS_FORKING &amp;&amp; !isTrue(fork, evaluator)) {</span>
-<span class="pc bpc" id="L145" title="1 of 2 branches missed.">            if (fork == null) {</span>
-<span class="nc" id="L146">                fork = new Xpp3Dom(&quot;fork&quot;);</span>
-<span class="nc" id="L147">                configuration.addChild(fork);</span>
+<span class="fc" id="L154">        Xpp3Dom fork = configuration.getChild(&quot;fork&quot;);</span>
+<span class="pc bpc" id="L155" title="2 of 4 branches missed.">        if (StrongEncapsulationHelperJava.CURRENT_JVM_NEEDS_FORKING &amp;&amp; !isTrue(fork, evaluator)) {</span>
+<span class="pc bpc" id="L156" title="1 of 2 branches missed.">            if (fork == null) {</span>
+<span class="nc" id="L157">                fork = new Xpp3Dom(&quot;fork&quot;);</span>
+<span class="nc" id="L158">                configuration.addChild(fork);</span>
             }
-<span class="fc" id="L149">            fork.setValue(&quot;true&quot;);</span>
-<span class="fc" id="L150">            LOGGER.debug(&quot;Set fork to true&quot;);</span>
+<span class="fc" id="L160">            fork.setValue(&quot;true&quot;);</span>
+<span class="fc" id="L161">            LOGGER.debug(&quot;Set fork to true&quot;);</span>
         }
-<span class="fc" id="L152">        return fork;</span>
+<span class="fc" id="L163">        return fork;</span>
     }
 
     private void addAnnotationProcessorPath(Xpp3Dom configuration, Dependency dependency, PluginParameterExpressionEvaluator evaluator) {
-<span class="fc" id="L156">        Xpp3Dom annotationProcessorPaths = configuration.getChild(&quot;annotationProcessorPaths&quot;);</span>
-<span class="fc bfc" id="L157" title="All 2 branches covered.">        if (annotationProcessorPaths == null) {</span>
-<span class="fc" id="L158">            annotationProcessorPaths = new Xpp3Dom(&quot;annotationProcessorPaths&quot;);</span>
-<span class="fc" id="L159">            configuration.addChild(annotationProcessorPaths);</span>
+<span class="fc" id="L167">        Xpp3Dom annotationProcessorPaths = configuration.getChild(&quot;annotationProcessorPaths&quot;);</span>
+<span class="fc bfc" id="L168" title="All 2 branches covered.">        if (annotationProcessorPaths == null) {</span>
+<span class="fc" id="L169">            annotationProcessorPaths = new Xpp3Dom(&quot;annotationProcessorPaths&quot;);</span>
+<span class="fc" id="L170">            configuration.addChild(annotationProcessorPaths);</span>
         }
-<span class="pc bpc" id="L161" title="1 of 2 branches missed.">        if (!hasDependency(annotationProcessorPaths.getChildren(), dependency, evaluator)) {</span>
-<span class="fc" id="L162">            LOGGER.debug(&quot;Adding annotation processor path for dependency {}:{}&quot;, dependency.getGroupId(),</span>
-<span class="fc" id="L163">                    dependency.getArtifactId());</span>
-<span class="fc" id="L164">            Xpp3Dom path = new Xpp3Dom(&quot;path&quot;);</span>
-<span class="fc" id="L165">            annotationProcessorPaths.addChild(path);</span>
-<span class="fc" id="L166">            Xpp3Dom groupId = new Xpp3Dom(&quot;groupId&quot;);</span>
-<span class="fc" id="L167">            groupId.setValue(dependency.getGroupId());</span>
-<span class="fc" id="L168">            path.addChild(groupId);</span>
-<span class="fc" id="L169">            Xpp3Dom artifactId = new Xpp3Dom(&quot;artifactId&quot;);</span>
-<span class="fc" id="L170">            artifactId.setValue(dependency.getArtifactId());</span>
-<span class="fc" id="L171">            path.addChild(artifactId);</span>
-<span class="pc bpc" id="L172" title="1 of 2 branches missed.">            if (dependency.getVersion() != null) {</span>
-<span class="fc" id="L173">                Xpp3Dom version = new Xpp3Dom(&quot;version&quot;);</span>
-<span class="fc" id="L174">                version.setValue(dependency.getVersion());</span>
-<span class="fc" id="L175">                path.addChild(version);</span>
+<span class="fc bfc" id="L172" title="All 2 branches covered.">        if (!hasDependency(annotationProcessorPaths.getChildren(), dependency, evaluator)) {</span>
+<span class="fc" id="L173">            LOGGER.debug(&quot;Adding annotation processor path for dependency {}:{}&quot;, dependency.getGroupId(),</span>
+<span class="fc" id="L174">                    dependency.getArtifactId());</span>
+<span class="fc" id="L175">            Xpp3Dom path = new Xpp3Dom(&quot;path&quot;);</span>
+<span class="fc" id="L176">            annotationProcessorPaths.addChild(path);</span>
+<span class="fc" id="L177">            Xpp3Dom groupId = new Xpp3Dom(&quot;groupId&quot;);</span>
+<span class="fc" id="L178">            groupId.setValue(dependency.getGroupId());</span>
+<span class="fc" id="L179">            path.addChild(groupId);</span>
+<span class="fc" id="L180">            Xpp3Dom artifactId = new Xpp3Dom(&quot;artifactId&quot;);</span>
+<span class="fc" id="L181">            artifactId.setValue(dependency.getArtifactId());</span>
+<span class="fc" id="L182">            path.addChild(artifactId);</span>
+<span class="pc bpc" id="L183" title="1 of 2 branches missed.">            if (dependency.getVersion() != null) {</span>
+<span class="fc" id="L184">                Xpp3Dom version = new Xpp3Dom(&quot;version&quot;);</span>
+<span class="fc" id="L185">                version.setValue(dependency.getVersion());</span>
+<span class="fc" id="L186">                path.addChild(version);</span>
             }
         }
-<span class="fc" id="L178">    }</span>
+<span class="fc" id="L189">    }</span>
 
     private boolean isTrue(Xpp3Dom child, PluginParameterExpressionEvaluator evaluator) {
-<span class="fc" id="L181">        return Boolean.parseBoolean(getParameterValue(evaluator, child));</span>
+<span class="fc" id="L192">        return Boolean.parseBoolean(getParameterValue(evaluator, child));</span>
     }
 
     private boolean hasDependency(Xpp3Dom[] paths, Dependency dependency, PluginParameterExpressionEvaluator evaluator) {
-<span class="fc bfc" id="L185" title="All 2 branches covered.">        for (Xpp3Dom path : paths) {</span>
-<span class="fc" id="L186">            String groupId = getParameterValue(evaluator, path.getChild(&quot;groupId&quot;));</span>
-<span class="fc" id="L187">            String artifactId = getParameterValue(evaluator, path.getChild(&quot;artifactId&quot;));</span>
-<span class="pc bpc" id="L188" title="3 of 4 branches missed.">            if (dependency.getGroupId().equals(groupId) &amp;&amp; dependency.getArtifactId().equals(artifactId)) {</span>
-<span class="nc" id="L189">                return true;</span>
+<span class="fc bfc" id="L196" title="All 2 branches covered.">        for (Xpp3Dom path : paths) {</span>
+<span class="fc" id="L197">            String groupId = getParameterValue(evaluator, path.getChild(&quot;groupId&quot;));</span>
+<span class="fc" id="L198">            String artifactId = getParameterValue(evaluator, path.getChild(&quot;artifactId&quot;));</span>
+<span class="pc bpc" id="L199" title="1 of 4 branches missed.">            if (dependency.getGroupId().equals(groupId) &amp;&amp; dependency.getArtifactId().equals(artifactId)) {</span>
+<span class="fc" id="L200">                return true;</span>
             }
         }
-<span class="fc" id="L192">        return false;</span>
+<span class="fc" id="L203">        return false;</span>
     }
 
     private boolean hasCompilerArg(Xpp3Dom[] compilerArgs, String arg, PluginParameterExpressionEvaluator evaluator) {
-<span class="fc bfc" id="L196" title="All 2 branches covered.">        for (Xpp3Dom compilerArg : compilerArgs) {</span>
-<span class="fc" id="L197">            String value = getParameterValue(evaluator, compilerArg);</span>
-<span class="pc bpc" id="L198" title="2 of 4 branches missed.">            if (value != null &amp;&amp; value.startsWith(arg)) {</span>
-<span class="nc" id="L199">                return true;</span>
+<span class="fc bfc" id="L207" title="All 2 branches covered.">        for (Xpp3Dom compilerArg : compilerArgs) {</span>
+<span class="fc" id="L208">            String value = getParameterValue(evaluator, compilerArg);</span>
+<span class="pc bpc" id="L209" title="2 of 4 branches missed.">            if (value != null &amp;&amp; value.startsWith(arg)) {</span>
+<span class="nc" id="L210">                return true;</span>
             }
         }
-<span class="fc" id="L202">        return false;</span>
+<span class="fc" id="L213">        return false;</span>
     }
 
     private static class StrongEncapsulationHelperJava {
-<span class="fc" id="L206">        static final boolean CURRENT_JVM_NEEDS_FORKING = currentJvmNeedsForking();</span>
+<span class="fc" id="L217">        static final boolean CURRENT_JVM_NEEDS_FORKING = currentJvmNeedsForking();</span>
 
         private static boolean currentJvmNeedsForking() {
-<span class="pc bpc" id="L209" title="1 of 2 branches missed.">            if (SystemUtils.isJavaVersionAtMost(JavaVersion.JAVA_15)) {</span>
-<span class="nc" id="L210">                return false;</span>
+<span class="pc bpc" id="L220" title="1 of 2 branches missed.">            if (SystemUtils.isJavaVersionAtMost(JavaVersion.JAVA_15)) {</span>
+<span class="nc" id="L221">                return false;</span>
             }
             try {
-<span class="fc" id="L213">                Module unnamedModule = StrongEncapsulationHelperJava.class.getClassLoader().getUnnamedModule();</span>
-<span class="pc bpc" id="L214" title="1 of 2 branches missed.">                for (String className : new String[] { //</span>
+<span class="fc" id="L224">                Module unnamedModule = StrongEncapsulationHelperJava.class.getClassLoader().getUnnamedModule();</span>
+<span class="pc bpc" id="L225" title="1 of 2 branches missed.">                for (String className : new String[] { //</span>
                         &quot;com.sun.tools.javac.api.BasicJavacTask&quot;, //
                         &quot;com.sun.tools.javac.api.JavacTrees&quot;, //
                         &quot;com.sun.tools.javac.file.JavacFileManager&quot;, //
@@ -222,24 +233,24 @@ class CompilerConfiguration {
                         &quot;com.sun.tools.javac.tree.JCTree&quot;, //
                         &quot;com.sun.tools.javac.util.JCDiagnostic&quot;, //
                 }) {
-<span class="fc" id="L225">                    Class&lt;?&gt; clazz = Class.forName(className);</span>
-<span class="pc bpc" id="L226" title="1 of 2 branches missed.">                    if (!clazz.getModule().isExported(clazz.getPackageName(), unnamedModule)) {</span>
-<span class="fc" id="L227">                        return true;</span>
+<span class="fc" id="L236">                    Class&lt;?&gt; clazz = Class.forName(className);</span>
+<span class="pc bpc" id="L237" title="1 of 2 branches missed.">                    if (!clazz.getModule().isExported(clazz.getPackageName(), unnamedModule)) {</span>
+<span class="fc" id="L238">                        return true;</span>
                     }
                 }
-<span class="nc bnc" id="L230" title="All 2 branches missed.">                for (String className : new String[] { //</span>
+<span class="nc bnc" id="L241" title="All 2 branches missed.">                for (String className : new String[] { //</span>
                         &quot;com.sun.tools.javac.code.Symbol&quot;, //
                         &quot;com.sun.tools.javac.comp.Enter&quot;, //
                 }) {
-<span class="nc" id="L234">                    Class&lt;?&gt; clazz = Class.forName(className);</span>
-<span class="nc bnc" id="L235" title="All 2 branches missed.">                    if (!clazz.getModule().isOpen(clazz.getPackageName(), unnamedModule)) {</span>
-<span class="nc" id="L236">                        return true;</span>
+<span class="nc" id="L245">                    Class&lt;?&gt; clazz = Class.forName(className);</span>
+<span class="nc bnc" id="L246" title="All 2 branches missed.">                    if (!clazz.getModule().isOpen(clazz.getPackageName(), unnamedModule)) {</span>
+<span class="nc" id="L247">                        return true;</span>
                     }
                 }
-<span class="nc" id="L239">            } catch (ClassNotFoundException ignored) {</span>
-<span class="nc" id="L240">                return true;</span>
-<span class="nc" id="L241">            }</span>
-<span class="nc" id="L242">            return false;</span>
+<span class="nc" id="L250">            } catch (ClassNotFoundException ignored) {</span>
+<span class="nc" id="L251">                return true;</span>
+<span class="nc" id="L252">            }</span>
+<span class="nc" id="L253">            return false;</span>
         }
     }
 }
