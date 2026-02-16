@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   release:
-    uses: jonasrutishauser/parent/.github/workflows/common-release.yml@v36
+    uses: jonasrutishauser/parent/.github/workflows/common-release.yml@v37
     with:
       name: 'Error Prone Maven Plugin'
       java-version: '21'
