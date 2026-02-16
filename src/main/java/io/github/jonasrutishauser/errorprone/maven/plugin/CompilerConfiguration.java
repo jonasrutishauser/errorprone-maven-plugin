@@ -4,24 +4,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.inject.Inject;
 import javax.inject.Named;
 
 import org.apache.commons.lang3.JavaVersion;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.maven.SessionScoped;
-import org.apache.maven.execution.ProjectExecutionEvent;
-import org.apache.maven.execution.ProjectExecutionListener;
-import org.apache.maven.lifecycle.LifecycleExecutionException;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.PluginParameterExpressionEvaluator;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluationException;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Named
 @SessionScoped
-public class CompilerConfiguration implements ProjectExecutionListener {
+class CompilerConfiguration {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CompilerConfiguration.class);
 
@@ -43,29 +44,19 @@ public class CompilerConfiguration implements ProjectExecutionListener {
             "-XDaddTypeAnnotationsToSymbol=true");
 
     private final Map<String, List<MojoExecution>> compilerExecutions = new HashMap<>();
+    private final MavenSession session;
 
-    @Override
-    public void beforeProjectExecution(ProjectExecutionEvent event) throws LifecycleExecutionException {
-        // nothing to do
+    @Inject
+    CompilerConfiguration(MavenSession session) {
+        this.session = session;
     }
 
-    @Override
-    public void beforeProjectLifecycleExecution(ProjectExecutionEvent event) throws LifecycleExecutionException {
-        compilerExecutions.put(event.getProject().getId(), event.getExecutionPlan().stream() //
-                .filter(mojoExecution -> "org.apache.maven.plugins".equals(mojoExecution.getGroupId())
-                        && "maven-compiler-plugin".equals(mojoExecution.getArtifactId())
-                        && ("compile".equals(mojoExecution.getGoal()) || "testCompile".equals(mojoExecution.getGoal()))) //
-                .toList());
+    public void setCompilerExecutions(MavenProject project, List<MojoExecution> executions) {
+        compilerExecutions.put(project.getId(), executions);
     }
 
-    @Override
-    public void afterProjectExecutionSuccess(ProjectExecutionEvent event) throws LifecycleExecutionException {
-        compilerExecutions.remove(event.getProject().getId());
-    }
-
-    @Override
-    public void afterProjectExecutionFailure(ProjectExecutionEvent event) {
-        compilerExecutions.remove(event.getProject().getId());
+    public void clearCompilerExecutions(MavenProject project) {
+        compilerExecutions.remove(project.getId());
     }
 
     void configure(MavenProject project, String propertyName) {
@@ -74,24 +65,43 @@ public class CompilerConfiguration implements ProjectExecutionListener {
         }
     }
 
-    private void configureCompilerPlugin(MavenProject project, MojoExecution compilerExecution, String propertyName) {
-        LOGGER.debug("Configuring compiler plugin for execution {}", compilerExecution.getExecutionId());
-        project.getDependencies().stream().filter(dependency -> "errorprone".equals(dependency.getType()))
-                .forEach(dependency -> addAnnotationProcessorPath(compilerExecution.getConfiguration(), dependency));
+    String getParameterValue(MojoExecution mojoExecution, Xpp3Dom value) {
+        PluginParameterExpressionEvaluator evaluator = new PluginParameterExpressionEvaluator(session, mojoExecution);
+        return getParameterValue(evaluator, value);
+    }
 
-        Xpp3Dom fork = setForkIfNeeded(compilerExecution.getConfiguration());
-
-        Xpp3Dom compilerArgs = createOrGetCompilerArgs(compilerExecution.getConfiguration());
-        addPluginArgument(propertyName, compilerArgs);
-        addCompilerArguments(compilerArgs);
-        if (isTrue(fork)) {
-            addJvmStrongEncapsulationArguments(compilerArgs);
+    private String getParameterValue(PluginParameterExpressionEvaluator evaluator, Xpp3Dom value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            Object evaluated = evaluator.evaluate(value.getValue());
+            return evaluated == null ? value.getAttribute("default-value") : evaluated.toString();
+        } catch (ExpressionEvaluationException e) {
+            return null;
         }
     }
 
-    private void addJvmStrongEncapsulationArguments(Xpp3Dom compilerArgs) {
+    private void configureCompilerPlugin(MavenProject project, MojoExecution compilerExecution, String propertyName) {
+        LOGGER.debug("Configuring compiler plugin for execution {}", compilerExecution.getExecutionId());
+        PluginParameterExpressionEvaluator evaluator = new PluginParameterExpressionEvaluator(session, compilerExecution);
+
+        project.getDependencies().stream().filter(dependency -> "errorprone".equals(dependency.getType()))
+                .forEach(dependency -> addAnnotationProcessorPath(compilerExecution.getConfiguration(), dependency, evaluator));
+
+        Xpp3Dom fork = setForkIfNeeded(compilerExecution.getConfiguration(), evaluator);
+
+        Xpp3Dom compilerArgs = createOrGetCompilerArgs(compilerExecution.getConfiguration());
+        addPluginArgument(propertyName, compilerArgs, evaluator);
+        addCompilerArguments(compilerArgs, evaluator);
+        if (isTrue(fork, evaluator)) {
+            addJvmStrongEncapsulationArguments(compilerArgs, evaluator);
+        }
+    }
+
+    private void addJvmStrongEncapsulationArguments(Xpp3Dom compilerArgs, PluginParameterExpressionEvaluator evaluator) {
         for (String jvmArg : JVM_ARGS_STRONG_ENCAPSULATION) {
-            if (!hasCompilerArg(compilerArgs.getChildren(), jvmArg)) {
+            if (!hasCompilerArg(compilerArgs.getChildren(), jvmArg, evaluator)) {
                 LOGGER.debug("Adding compiler argument \"{}\"", jvmArg);
                 Xpp3Dom compilerArg = new Xpp3Dom("arg");
                 compilerArg.setValue(jvmArg);
@@ -100,9 +110,9 @@ public class CompilerConfiguration implements ProjectExecutionListener {
         }
     }
 
-    private void addCompilerArguments(Xpp3Dom compilerArgs) {
+    private void addCompilerArguments(Xpp3Dom compilerArgs, PluginParameterExpressionEvaluator evaluator) {
         for (String arg : COMPILER_ARGS) {
-            if (!hasCompilerArg(compilerArgs.getChildren(), arg)) {
+            if (!hasCompilerArg(compilerArgs.getChildren(), arg, evaluator)) {
                 LOGGER.debug("Adding compiler argument \"{}\"", arg);
                 Xpp3Dom compilerArg = new Xpp3Dom("arg");
                 compilerArg.setValue(arg);
@@ -111,9 +121,8 @@ public class CompilerConfiguration implements ProjectExecutionListener {
         }
     }
 
-    private void addPluginArgument(String propertyName, Xpp3Dom compilerArgs) {
-        if (!hasCompilerArg(compilerArgs.getChildren(), "-Xplugin:ErrorProne")
-                && !hasCompilerArg(compilerArgs.getChildren(), "${" + propertyName + "}")) {
+    private void addPluginArgument(String propertyName, Xpp3Dom compilerArgs, PluginParameterExpressionEvaluator evaluator) {
+        if (!hasCompilerArg(compilerArgs.getChildren(), "-Xplugin:ErrorProne", evaluator)) {
             LOGGER.debug("Adding compiler argument \"${{}}\"", propertyName);
             Xpp3Dom compilerArg = new Xpp3Dom("arg");
             compilerArg.setValue("${" + propertyName + "}");
@@ -130,9 +139,9 @@ public class CompilerConfiguration implements ProjectExecutionListener {
         return compilerArgs;
     }
 
-    private Xpp3Dom setForkIfNeeded(Xpp3Dom configuration) {
+    private Xpp3Dom setForkIfNeeded(Xpp3Dom configuration, PluginParameterExpressionEvaluator evaluator) {
         Xpp3Dom fork = configuration.getChild("fork");
-        if (StrongEncapsulationHelperJava.CURRENT_JVM_NEEDS_FORKING && !isTrue(fork)) {
+        if (StrongEncapsulationHelperJava.CURRENT_JVM_NEEDS_FORKING && !isTrue(fork, evaluator)) {
             if (fork == null) {
                 fork = new Xpp3Dom("fork");
                 configuration.addChild(fork);
@@ -143,13 +152,13 @@ public class CompilerConfiguration implements ProjectExecutionListener {
         return fork;
     }
 
-    private void addAnnotationProcessorPath(Xpp3Dom configuration, Dependency dependency) {
+    private void addAnnotationProcessorPath(Xpp3Dom configuration, Dependency dependency, PluginParameterExpressionEvaluator evaluator) {
         Xpp3Dom annotationProcessorPaths = configuration.getChild("annotationProcessorPaths");
         if (annotationProcessorPaths == null) {
             annotationProcessorPaths = new Xpp3Dom("annotationProcessorPaths");
             configuration.addChild(annotationProcessorPaths);
         }
-        if (!hasDependency(annotationProcessorPaths.getChildren(), dependency)) {
+        if (!hasDependency(annotationProcessorPaths.getChildren(), dependency, evaluator)) {
             LOGGER.debug("Adding annotation processor path for dependency {}:{}", dependency.getGroupId(),
                     dependency.getArtifactId());
             Xpp3Dom path = new Xpp3Dom("path");
@@ -168,14 +177,14 @@ public class CompilerConfiguration implements ProjectExecutionListener {
         }
     }
 
-    private boolean isTrue(Xpp3Dom child) {
-        return child != null && Boolean.parseBoolean(child.getValue());
+    private boolean isTrue(Xpp3Dom child, PluginParameterExpressionEvaluator evaluator) {
+        return Boolean.parseBoolean(getParameterValue(evaluator, child));
     }
 
-    private boolean hasDependency(Xpp3Dom[] paths, Dependency dependency) {
+    private boolean hasDependency(Xpp3Dom[] paths, Dependency dependency, PluginParameterExpressionEvaluator evaluator) {
         for (Xpp3Dom path : paths) {
-            String groupId = path.getChild("groupId").getValue();
-            String artifactId = path.getChild("artifactId").getValue();
+            String groupId = getParameterValue(evaluator, path.getChild("groupId"));
+            String artifactId = getParameterValue(evaluator, path.getChild("artifactId"));
             if (dependency.getGroupId().equals(groupId) && dependency.getArtifactId().equals(artifactId)) {
                 return true;
             }
@@ -183,9 +192,10 @@ public class CompilerConfiguration implements ProjectExecutionListener {
         return false;
     }
 
-    private boolean hasCompilerArg(Xpp3Dom[] compilerArgs, String arg) {
+    private boolean hasCompilerArg(Xpp3Dom[] compilerArgs, String arg, PluginParameterExpressionEvaluator evaluator) {
         for (Xpp3Dom compilerArg : compilerArgs) {
-            if (compilerArg.getValue().startsWith(arg)) {
+            String value = getParameterValue(evaluator, compilerArg);
+            if (value != null && value.startsWith(arg)) {
                 return true;
             }
         }
