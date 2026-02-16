@@ -12,7 +12,9 @@
 	<version>1.0.0-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 
+	<url>${url}</url>
 	<name>Error Prone Maven Plugin</name>
+	<description>Maven Plugin which configures the compile plugin to use Error Prone</description>
 
 	<properties>
 		<maven.compiler.release>21</maven.compiler.release>
@@ -118,4 +120,18 @@
 	<prerequisites>
 		<maven>3.9.8</maven>
 	</prerequisites>
+
+	<scm>
+		<connection>${scm.connection}</connection>
+		<developerConnection>${scm.developerConnection}</developerConnection>
+		<url>${scm_url}</url>
+		<tag>HEAD</tag>
+	</scm>
+
+	<distributionManagement>
+		<site>
+			<id>github</id>
+			<url>${distributionManagement.site.url}</url>
+		</site>
+	</distributionManagement>
 </project>
