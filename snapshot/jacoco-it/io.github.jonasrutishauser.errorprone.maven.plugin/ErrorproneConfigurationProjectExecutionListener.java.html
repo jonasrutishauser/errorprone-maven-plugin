@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang=""><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ErrorproneConfigurationProjectExecutionListener.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Error Prone Maven Plugin</a> &gt; <a href="index.source.html" class="el_package">io.github.jonasrutishauser.errorprone.maven.plugin</a> &gt; <span class="el_source">ErrorproneConfigurationProjectExecutionListener.java</span></div><h1>ErrorproneConfigurationProjectExecutionListener.java</h1><pre class="source lang-java linenums">package io.github.jonasrutishauser.errorprone.maven.plugin;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Provider;
+
+import org.apache.maven.execution.ProjectExecutionEvent;
+import org.apache.maven.execution.ProjectExecutionListener;
+import org.apache.maven.lifecycle.LifecycleExecutionException;
+import org.apache.maven.plugin.MojoExecution;
+
+@Named
+public class ErrorproneConfigurationProjectExecutionListener implements ProjectExecutionListener {
+
+    private final Provider&lt;CompilerConfiguration&gt; compilerConfiguration;
+
+    @Inject
+<span class="fc" id="L18">    ErrorproneConfigurationProjectExecutionListener(Provider&lt;CompilerConfiguration&gt; compilerConfiguration) {</span>
+<span class="fc" id="L19">        this.compilerConfiguration = compilerConfiguration;</span>
+<span class="fc" id="L20">    }</span>
+
+    @Override
+    public void beforeProjectExecution(ProjectExecutionEvent event) throws LifecycleExecutionException {
+        // nothing to do
+<span class="fc" id="L25">    }</span>
+
+    @Override
+    public void beforeProjectLifecycleExecution(ProjectExecutionEvent event) throws LifecycleExecutionException {
+<span class="fc" id="L29">        CompilerConfiguration configuration = compilerConfiguration.get();</span>
+<span class="fc" id="L30">        configuration.setCompilerExecutions(event.getProject(), event.getExecutionPlan().stream()</span>
+<span class="fc" id="L31">                .filter(execution -&gt; isJavacCompilerExecution(configuration, execution)).toList());</span>
+<span class="fc" id="L32">    }</span>
+
+    private boolean isJavacCompilerExecution(CompilerConfiguration configuration, MojoExecution mojoExecution) {
+<span class="fc bfc" id="L35" title="All 2 branches covered.">        if (&quot;org.apache.maven.plugins&quot;.equals(mojoExecution.getGroupId())</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">                &amp;&amp; &quot;maven-compiler-plugin&quot;.equals(mojoExecution.getArtifactId())</span>
+<span class="pc bpc" id="L37" title="1 of 4 branches missed.">                &amp;&amp; (&quot;compile&quot;.equals(mojoExecution.getGoal()) || &quot;testCompile&quot;.equals(mojoExecution.getGoal()))) {</span>
+<span class="fc" id="L38">            String value = configuration.getParameterValue(mojoExecution, mojoExecution.getConfiguration().getChild(&quot;compilerId&quot;));</span>
+<span class="pc bpc" id="L39" title="2 of 4 branches missed.">            return value == null || &quot;javac&quot;.equals(value);</span>
+        }
+<span class="fc" id="L41">        return false;</span>
+    }
+
+    @Override
+    public void afterProjectExecutionSuccess(ProjectExecutionEvent event) throws LifecycleExecutionException {
+<span class="nc" id="L46">        compilerConfiguration.get().clearCompilerExecutions(event.getProject());</span>
+<span class="nc" id="L47">    }</span>
+
+    @Override
+    public void afterProjectExecutionFailure(ProjectExecutionEvent event) {
+<span class="fc" id="L51">        compilerConfiguration.get().clearCompilerExecutions(event.getProject());</span>
+<span class="fc" id="L52">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

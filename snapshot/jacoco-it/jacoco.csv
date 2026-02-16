@@ -2,7 +2,8 @@ GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_
 Error Prone Maven Plugin,io.github.jonasrutishauser.errorprone.maven.plugin,CheckSeverity,0,27,0,0,0,2,0,1,0,1
 Error Prone Maven Plugin,io.github.jonasrutishauser.errorprone.maven.plugin,TestConfigurationMojo,6,0,0,0,2,0,2,0,2,0
 Error Prone Maven Plugin,io.github.jonasrutishauser.errorprone.maven.plugin,ErrorproneArtifactHandler,4,13,0,0,2,6,2,6,2,6
-Error Prone Maven Plugin,io.github.jonasrutishauser.errorprone.maven.plugin,CompilerConfiguration,25,422,17,35,6,91,17,29,1,19
+Error Prone Maven Plugin,io.github.jonasrutishauser.errorprone.maven.plugin,CompilerConfiguration,22,439,16,28,7,94,15,26,0,19
+Error Prone Maven Plugin,io.github.jonasrutishauser.errorprone.maven.plugin,ErrorproneConfigurationProjectExecutionListener,9,77,3,9,2,16,4,9,1,6
 Error Prone Maven Plugin,io.github.jonasrutishauser.errorprone.maven.plugin,CompilerConfiguration.StrongEncapsulationHelperJava,47,73,7,3,9,7,5,2,0,2
 Error Prone Maven Plugin,io.github.jonasrutishauser.errorprone.maven.plugin,AbstractConfigurationMojo,40,227,8,12,6,45,7,9,0,6
 Error Prone Maven Plugin,io.github.jonasrutishauser.errorprone.maven.plugin,ConfigurationMojo,0,6,0,0,0,2,0,2,0,2
