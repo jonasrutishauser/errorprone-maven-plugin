@@ -86,8 +86,11 @@ class CompilerConfiguration {
         LOGGER.debug("Configuring compiler plugin for execution {}", compilerExecution.getExecutionId());
         PluginParameterExpressionEvaluator evaluator = new PluginParameterExpressionEvaluator(session, compilerExecution);
 
-        project.getDependencies().stream().filter(dependency -> "errorprone".equals(dependency.getType()))
-                .forEach(dependency -> addAnnotationProcessorPath(compilerExecution.getConfiguration(), dependency, evaluator));
+        addAnnotationProcessorPaths(project.getDependencies(), compilerExecution.getConfiguration(), evaluator);
+        if (project.getDependencyManagement() != null) {
+            addAnnotationProcessorPaths(project.getDependencyManagement().getDependencies(),
+                    compilerExecution.getConfiguration(), evaluator);
+        }
 
         Xpp3Dom fork = setForkIfNeeded(compilerExecution.getConfiguration(), evaluator);
 
@@ -96,6 +99,14 @@ class CompilerConfiguration {
         addCompilerArguments(compilerArgs, evaluator);
         if (isTrue(fork, evaluator)) {
             addJvmStrongEncapsulationArguments(compilerArgs, evaluator);
+        }
+    }
+
+    private void addAnnotationProcessorPaths(List<Dependency> dependencies, Xpp3Dom configuration, PluginParameterExpressionEvaluator evaluator) {
+        for (Dependency dependency : dependencies) {
+            if ("errorprone".equals(dependency.getType())) {
+                addAnnotationProcessorPath(configuration, dependency, evaluator);
+            }
         }
     }
 

@@ -164,7 +164,9 @@ abstract class AbstractConfigurationMojo extends AbstractMojo {
         }
         getLog().debug("Setting project property \"" + propertyName + "\" to \"" + propertyValue + "\".");
         project.getProperties().put(propertyName, propertyValue);
-        compilerConfiguration.configure(project, propertyName);
+        if (enabled) {
+            compilerConfiguration.configure(project, propertyName);
+        }
     }
 
     private List<String> getFlags() throws MojoExecutionException {
